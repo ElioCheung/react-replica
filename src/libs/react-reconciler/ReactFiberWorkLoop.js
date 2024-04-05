@@ -1,5 +1,7 @@
 import { finishQueueingConcurrentUpdates } from './ReactFiberClassUpdateQueue';
 import { beginWork } from './ReactFIberBeginWork';
+import { FiberNode } from './ReactFiber';
+import { StaticMask } from './ReactFiberFlags';
 
 export const NoContext = /*             */ 0b000;
 const BatchedContext = /*               */ 0b001;
@@ -50,8 +52,10 @@ function renderRootSync(root) {
   do {
     try {
       workLoopSync();
+      break;
     } catch (error) {
       console.error(error);
+      workInProgress = null;
     }
   } while (true);
 }
@@ -98,7 +102,7 @@ function createWorkInProgress(hostRootFiber, pendingProps) {
   wip.sibling = hostRootFiber.sibling;
   wip.index = hostRootFiber.index;
 
-  finishQueueingConcurrentUpdates();
+  // finishQueueingConcurrentUpdates();
   return wip;
 }
 
