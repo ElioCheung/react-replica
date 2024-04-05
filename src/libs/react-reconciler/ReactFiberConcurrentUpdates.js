@@ -2,6 +2,7 @@ import { HostRoot } from './ReactWorkTags';
 
 const concurrentQueues = [];
 let concurrentQueuesIndex = 0;
+let hasForceUpdate = false;
 
 function enqueueUpdate(fiber, queue, update) {
   concurrentQueues[concurrentQueuesIndex++] = fiber;
