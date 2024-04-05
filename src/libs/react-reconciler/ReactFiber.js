@@ -3,7 +3,7 @@ import { NoMode, StrictEffectsMode, StrictLegacyMode } from './ReactTypeOfMode';
 import { HostRoot } from './ReactWorkTags';
 import { NoFlags } from './ReactFiberFlags';
 
-function FiberNode(
+export function FiberNode(
   tag,
   pendingProps,
   key,
