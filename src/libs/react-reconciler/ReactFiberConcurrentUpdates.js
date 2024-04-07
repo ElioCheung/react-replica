@@ -1,16 +1,15 @@
 import { HostRoot } from './ReactWorkTags';
 
-const concurrentQueues = [];
+let concurrentQueues = [];
 let concurrentQueuesIndex = 0;
 let hasForceUpdate = false;
 
-function enqueueUpdate(fiber, queue, update) {
-  concurrentQueues[concurrentQueuesIndex++] = fiber;
-  concurrentQueues[concurrentQueuesIndex++] = queue;
-  concurrentQueues[concurrentQueuesIndex++] = update;
-  // concurrentQueues[concurrentQueuesIndex++] = lane;
-
-  // TODO: lane
+function pushConcurrentUpdateQueue(update) {
+  if (concurrentQueues === null) {
+    concurrentQueues = [update];
+  } else {
+    concurrentQueues.push(update);
+  }
 }
 
 function getRootForUpdateFiber(fiber) {
@@ -25,6 +24,44 @@ function getRootForUpdateFiber(fiber) {
 }
 
 export function enqueueConcurrentClassUpdate(fiber, queue, update) {
-  enqueueUpdate(fiber, queue, update);
+  const interleaved = queue.interleaved;
+  if (interleaved === null) {
+    // This is the first update. Create a circular list
+    update.next = update;
+    // At the end of the current render, this queue's interleaved updates will
+    // be transferred to the pending queue.
+    pushConcurrentUpdateQueue(queue);
+  } else {
+    update.next = interleaved.next;
+    interleaved.next = update;
+  }
+
+  queue.interleaved = update;;
   return getRootForUpdateFiber(fiber);
+}
+
+export function finishQueueingConcurrentUpdates() {
+  if (concurrentQueues !== null) {
+    for (let i = 0; i < concurrentQueues.length; i++) {
+      const queue = concurrentQueues[i];
+      const lastInterleavedUpdate = queue.interleaved;
+      if (lastInterleavedUpdate !== null) {
+        // Transfer the interleaved updates to the pending queue.
+        queue.interleaved = null;
+        const firstInterleavedUpdate = lastInterleavedUpdate.next;
+        const lastPendingUpdate = queue.pending;
+
+        if (lastPendingUpdate !== null) {
+          const firstPendingUpdate = lastPendingUpdate.next;
+          lastPendingUpdate.next = firstInterleavedUpdate;
+          lastInterleavedUpdate.next = firstPendingUpdate;
+        }
+        
+        // Set the pending queue to the interleaved updates.
+        queue.pending = lastInterleavedUpdate;
+      }
+    }
+    // reset concurrentQueues
+    concurrentQueues = null;
+  }
 }
