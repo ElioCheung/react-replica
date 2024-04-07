@@ -1,6 +1,8 @@
 import { cloneUpdateQueue, processUpdateQueue } from './ReactFiberClassUpdateQueue';
 import { reconcileChildFibers, mountChildFibers } from './ReactChildFiber';
 import { HostRoot, FunctionComponent, IndeterminateComponent, HostComponent } from './ReactWorkTags';
+import { shouldSetTextContent } from '../react-dom/client/ReactDOMHostConfig';
+import { ContentReset } from './ReactFiberFlags';
 
 export function beginWork(current, wip) {
   if (current !== null) {
@@ -17,8 +19,7 @@ export function beginWork(current, wip) {
       console.log('FunctionComponent');
       break;
     case HostComponent:
-      console.log('HostComponent');
-      break;
+      return updateHostComponent(current, wip);
     default:
       console.warn('Not yet implemented');
       break;
@@ -53,6 +54,26 @@ function mountIndeterminateComponent(current, wip, Component) {
   }
   wip.tag = FunctionComponent;
   reconcileChildren(null, wip, children);
+  return wip.child;
+}
+
+function updateHostComponent(current, wip) {
+  const type = wip.type;
+  const prevProps = current !== null ? current.memoizedProps : null;
+  const nextProps = wip.pendingProps;
+
+  let nextChildren = nextProps.children;
+  const isDirectTextChild = shouldSetTextContent(type, nextProps);
+
+  if (isDirectTextChild) {
+    nextChildren = null;
+  } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
+    // If we're switching from a direct text child to a normal child, or to
+    // empty, we need to schedule the text content to be reset.
+    workInProgress.flags |= ContentReset;
+  }
+
+  reconcileChildren(current, wip, nextChildren);
   return wip.child;
 }
 
