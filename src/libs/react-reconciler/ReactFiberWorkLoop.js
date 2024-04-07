@@ -66,6 +66,7 @@ function prepareFreshStack(fiberRoot) {
 
   workInProgressRoot = fiberRoot;
   const wip = createWorkInProgress(fiberRoot.current, null);
+  workInProgress = wip;
   return wip;
 }
 
@@ -76,31 +77,44 @@ function resetWorkInProgressStack() {
   workInProgress = null;
 }
 
-function createWorkInProgress(hostRootFiber, pendingProps) {
-  let wip = hostRootFiber.alternate;
+function createWorkInProgress(current, pendingProps) {
+  let wip = current.alternate;
   if (wip === null) {
-    wip = new FiberNode(hostRootFiber.tag, pendingProps, hostRootFiber.key, hostRootFiber.mode);
-    wip.elementType = hostRootFiber.elementType;
-    wip.type = hostRootFiber.type;
-    wip.stateNode = hostRootFiber.stateNode;
+    wip = new FiberNode(current.tag, pendingProps, current.key, current.mode);
+    wip.elementType = current.elementType;
+    wip.type = current.type;
+    wip.stateNode = current.stateNode;
+
+    wip.alternate = current;
+    current.alternate = wip;
   } else {
-    // TODO: Update
+    wip.pendingProps = pendingProps;
+    // Needed because Blocks store data on type.
+    wip.type = current.type;
+
+    // We already have an alternate.
+    // Reset the effect tag.
+    wip.flags = NoFlags;
+
+    // The effects are no longer valid.
+    wip.subtreeFlags = NoFlags;
+    wip.deletions = null;
   }
 
   // Reset all effects except static ones.
   // Static effects are not specific to a render.
-  wip.flags = hostRootFiber.flags & StaticMask;
-  wip.childLanes = hostRootFiber.childLanes;
-  wip.lanes = hostRootFiber.lanes;
+  wip.flags = current.flags & StaticMask;
+  // wip.childLanes = current.childLanes;
+  // wip.lanes = current.lanes;
 
-  wip.child = hostRootFiber.child;
-  wip.memoizedProps = hostRootFiber.memoizedProps;
-  wip.memoizedState = hostRootFiber.memoizedState;
-  wip.updateQueue = hostRootFiber.updateQueue;
+  wip.child = current.child;
+  wip.memoizedProps = current.memoizedProps;
+  wip.memoizedState = current.memoizedState;
+  wip.updateQueue = current.updateQueue;
 
   // These will be overridden during the parent's reconciliation
-  wip.sibling = hostRootFiber.sibling;
-  wip.index = hostRootFiber.index;
+  wip.sibling = current.sibling;
+  wip.index = current.index;
 
   // finishQueueingConcurrentUpdates();
   return wip;
