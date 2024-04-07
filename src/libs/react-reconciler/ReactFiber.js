@@ -1,7 +1,9 @@
 import { ConcurrentRoot } from './ReactRootTags';
-import { NoMode, StrictEffectsMode, StrictLegacyMode } from './ReactTypeOfMode';
-import { HostRoot } from './ReactWorkTags';
+import { ConcurrentMode, NoMode, StrictEffectsMode, StrictLegacyMode } from './ReactTypeOfMode';
+import { HostComponent, HostRoot, HostText, IndeterminateComponent } from './ReactWorkTags';
 import { NoFlags } from './ReactFiberFlags';
+import { REACT_STRICT_MODE_TYPE } from '../shared/ReactSymbols';
+import { Mode } from './ReactWorkTags';
 
 export function FiberNode(
   tag,
@@ -62,4 +64,55 @@ export function createHostRootFiber(tag, isSisStrictMode) {
   }
 
   return createFiber(HostRoot, null, null, mode);
+}
+
+export function createFiberFromElement(element, mode) {
+  let owner = null;
+  const type = element.type;
+  const key = element.key;
+  const pendingProps = element.props;
+
+  const fiber = createFiberFromTypeAndProps(
+    type,
+    key,
+    pendingProps,
+    owner,
+    mode,
+  );
+
+  return fiber;
+}
+
+export function createFiberFromTypeAndProps(
+  type,
+  key,
+  pendingProps,
+  owner,
+  mode,
+) {
+  let fiberFlag = IndeterminateComponent;
+  if (typeof type === 'function') {
+    // 
+  } else if (typeof type === 'string') {
+    fiberFlag = HostComponent;
+  } else {
+    getTag: switch (type) {
+      case REACT_STRICT_MODE_TYPE:
+        fiberFlag = Mode;
+        mode |= StrictLegacyMode;
+        if ((mode & ConcurrentMode) !== NoMode) {
+          mode |= StrictEffectsMode;
+        }
+    }
+  }
+
+  const fiber = createFiber(fiberFlag, pendingProps, key, mode);
+  fiber.elementType = type;
+  fiber.type = type;
+
+  return fiber;
+}
+
+export function createFIberFormContext(context, mode) {
+  return createFiber(HostText, context, null, mode);
 }
