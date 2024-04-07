@@ -12,10 +12,11 @@ export function initializeUpdateQueue(fiber) {
     lastBaseUpdate: null,
     shared: {
       pending: null,
+      interleaved: null,
       // lanes: NoLanes,
       // hiddenCallbacks: null,
     },
-    callbacks: null,
+    effects: null,
   };
 
   fiber.updateQueue = queue;
@@ -39,33 +40,33 @@ export function enqueueUpdate(fiber, update) {
   return enqueueConcurrentClassUpdate(fiber, sharedQueue, update);
 }
 
-export function finishQueueingConcurrentUpdates() {
-  const endIndex = concurrentQueuesIndex;
-  concurrentQueuesIndex = 0;
+// export function finishQueueingConcurrentUpdates() {
+//   const endIndex = concurrentQueuesIndex;
+//   concurrentQueuesIndex = 0;
 
-  let i = 0;
-  while (i < endIndex) {
-    const fiber = concurrentQueues[i];
-    concurrentQueues[i++] = null;
-    const queue = concurrentQueues[i];
-    concurrentQueues[i++] = null;
-    const update = concurrentQueues[i];
-    concurrentQueues[i++] = null;
-    // const lane = concurrentQueues[i];
-    // concurrentQueues[i++] = null;
+//   let i = 0;
+//   while (i < endIndex) {
+//     const fiber = concurrentQueues[i];
+//     concurrentQueues[i++] = null;
+//     const queue = concurrentQueues[i];
+//     concurrentQueues[i++] = null;
+//     const update = concurrentQueues[i];
+//     concurrentQueues[i++] = null;
+//     // const lane = concurrentQueues[i];
+//     // concurrentQueues[i++] = null;
 
-    if (queue !== null && update !== null ) {
-      const pending = queue.pending;
-      if (pending === null) {
-        update.next = update;
-      } else {
-        update.next = pending.next;
-        pending.next = update;
-      }
-      queue.pending = update;
-    }
-  }
-}
+//     if (queue !== null && update !== null ) {
+//       const pending = queue.pending;
+//       if (pending === null) {
+//         update.next = update;
+//       } else {
+//         update.next = pending.next;
+//         pending.next = update;
+//       }
+//       queue.pending = update;
+//     }
+//   }
+// }
 
 export function cloneUpdateQueue(current, wip) {
   const queue = wip.updateQueue;
@@ -85,9 +86,35 @@ export function cloneUpdateQueue(current, wip) {
 
 export function processUpdateQueue(wip, props) {
   const queue = wip.updateQueue;
+  // ignore
+  // const firstBaseUpdate = queue.firstBaseUpdate;
+  // const lastBaseUpdate = queue.lastBaseUpdate;
+ 
+  const pendingQueue = queue.shared.pending;
+  let update = null;
+  // first rending, pendingQueue must non-null
+  if (pendingQueue !== null) {
+    // set queue.shared.pending to null, to avoid process it again
+    queue.shared.pending = null;
+    
+    update = pendingQueue.next;
+    pendingQueue.next = null;
+    // const lastPendingUpdate = pendingQueue;
+    // const firstPendingUpdate = lastPendingUpdate.next;
+    // lastPendingUpdate.next = null;
+
+    // if (lastBaseUpdate === null) {
+    //   firstBaseUpdate = firstPendingUpdate;
+    // } else {
+    //   lastBaseUpdate.next = firstPendingUpdate;
+    // }
+
+    // lastBaseUpdate = lastPendingUpdate;
+  }
+
   let newState = queue.baseState;
   newState = getStateFromUpdate(
-    workInProgress,
+    wip,
     queue,
     update,
     newState,
@@ -120,7 +147,7 @@ function getStateFromUpdate(
         return prevState;
       }
       // Merge the partial state and the previous state.
-      return assign({}, prevState, partialState);
+      return Object.assign({}, prevState, partialState);
     }
   }
 
