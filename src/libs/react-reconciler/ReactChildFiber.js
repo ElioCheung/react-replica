@@ -86,6 +86,8 @@ function createChildReconciler(shouldTrackSideEffects) {
         ),
       );
     }
+
+    return null;
   }
 
   function reconcileChildFibers(returnFiber, currentFirstChild, newChild) {
