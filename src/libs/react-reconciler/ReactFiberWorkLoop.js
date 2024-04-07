@@ -1,4 +1,4 @@
-import { finishQueueingConcurrentUpdates } from './ReactFiberClassUpdateQueue';
+import { finishQueueingConcurrentUpdates } from './ReactFiberConcurrentUpdates';
 import { beginWork } from './ReactFIberBeginWork';
 import { FiberNode } from './ReactFiber';
 import { StaticMask } from './ReactFiberFlags';
@@ -67,6 +67,9 @@ function prepareFreshStack(fiberRoot) {
   workInProgressRoot = fiberRoot;
   const wip = createWorkInProgress(fiberRoot.current, null);
   workInProgress = wip;
+
+  finishQueueingConcurrentUpdates();
+
   return wip;
 }
 
