@@ -1,7 +1,8 @@
 import { finishQueueingConcurrentUpdates } from './ReactFiberConcurrentUpdates';
 import { beginWork } from './ReactFIberBeginWork';
 import { FiberNode } from './ReactFiber';
-import { StaticMask } from './ReactFiberFlags';
+import { Incomplete, NoFlags, StaticMask } from './ReactFiberFlags';
+import { completeWork } from './ReactFiberCompleteWork';
 
 export const NoContext = /*             */ 0b000;
 const BatchedContext = /*               */ 0b001;
@@ -135,8 +136,44 @@ function performUnitOfWork(wip) {
   wip.memoizedProps = wip.pendingProps;
 
   if (next === null) {
-    // TODO: complete unit of work
+    // If this doesn't spawn new work, complete the current work.
+    completeUnitOfWork(wip);
   } else {
     workInProgress = next;
   }
+}
+
+function completeUnitOfWork(completedWork) {
+  // Attempt to complete the current unit of work, then move to the next
+  // sibling. If there are no more siblings, return to the parent fiber.
+
+  do {
+    // The current, flushed, state of this fiber is the alternate. Ideally
+    // nothing should rely on this, but relying on it here means that we don't
+    // need an additional field on the work in progress.
+    const current = completedWork.alternate;
+    const returnFiber = completedWork.return;
+
+    if ((completedWork.flags & Incomplete) === NoFlags) {
+      const next = completeWork(current, completedWork);
+      if (next !== null) {
+        workInProgress = next;
+        return;
+      } else {
+        // TODO: ohter 
+      }
+
+      const siblingFiber = completedWork.sibling;
+      if (siblingFiber !== null) {
+        // If there is more work to do in this returnFiber, do that next.
+        workInProgress = siblingFiber;
+        return;
+      }
+
+      // Otherwise, return to the parent
+      completedWork = returnFiber;
+      // Update the next thing we're working on in case something throws.
+      workInProgress = completedWork;
+    }
+  } while (completedWork !== null);
 }
