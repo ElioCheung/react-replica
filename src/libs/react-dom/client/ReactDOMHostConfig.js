@@ -1,6 +1,8 @@
 import { precacheFiberNode, updateFiberProps } from '../../react-dom-bindings/src/client/ReactDOMComponentTree.js';
 import { setInitialProperties } from './ReactDOMComponent.js';
 import { HostComponent, HostPortal, HostText } from '../../react-reconciler/ReactWorkTags.js';
+import { setTextContent } from './setTextContent';
+import { COMMENT_NODE } from '../../shared/HTMLNodeType.js';
 
 export function shouldSetTextContent(type, props) {
   return (
@@ -80,5 +82,36 @@ export function finalizeInitialChildren(domElement, type, props, rootContainerIn
       return true;
     default:
       return false;
+  }
+}
+
+export function resetTextContent(domElement) {
+  setTextContent(domElement, '');
+}
+
+export function insertBefore(parent, child, beforeChild) {
+  parent.insertBefore(child, beforeChild);
+}
+
+export function appendChild(parent, child) {
+  parent.appendChild(child);
+}
+
+export function insertInContainerBefore(container, child, beforeChild) {
+  if (container.nodeType === COMMENT_NODE) {
+    container.parentNode.insertBefore(child, beforeChild);
+  } else {
+    container.insertBefore(child, beforeChild);
+  }
+}
+
+export function appendChildToContainer(container, child) {
+  let parent;
+  if (container.nodeType === COMMENT_NODE) {
+    parent = container.parentNode;
+    parent.insertBefore(child, container);
+  } else {
+    parent = container;
+    parent.appendChild(child);
   }
 }
