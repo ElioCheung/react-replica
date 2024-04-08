@@ -1,8 +1,9 @@
 import { finishQueueingConcurrentUpdates } from './ReactFiberConcurrentUpdates';
 import { beginWork } from './ReactFIberBeginWork';
 import { FiberNode } from './ReactFiber';
-import { Incomplete, NoFlags, StaticMask } from './ReactFiberFlags';
+import { Incomplete, NoFlags, StaticMask, MutationMask } from './ReactFiberFlags';
 import { completeWork } from './ReactFiberCompleteWork';
+import { commitMutationEffects } from './ReactFiberCommitWork';
 
 export const NoContext = /*             */ 0b000;
 const BatchedContext = /*               */ 0b001;
@@ -42,6 +43,10 @@ export function performConcurrentWorkOnRoot(root) {
   if (!shouldTimeSlice) {
     // legacy render mode
     renderRootSync(root);
+
+    const finishedWork = root.current.alternate;
+    root.finishedWork = finishedWork;
+    commitRoot(root);
   }
 }
 
@@ -59,6 +64,8 @@ function renderRootSync(root) {
       workInProgress = null;
     }
   } while (true);
+
+  workInProgressRoot = null;
 }
 
 function prepareFreshStack(fiberRoot) {
@@ -176,4 +183,30 @@ function completeUnitOfWork(completedWork) {
       workInProgress = completedWork;
     }
   } while (completedWork !== null);
+}
+
+function commitRoot(root) {
+  commitRootImpl(root);
+  return null;
+}
+
+function commitRootImpl(fiberRoot) {
+  const finishedWork = fiberRoot.finishedWork;
+  fiberRoot.finishedWork = null;
+
+  if (finishedWork === fiberRoot.current) {
+    throw new Error(
+      'Cannot commit the same tree as before. This error is likely caused by ' +
+        'a bug in React. Please file an issue.',
+    );
+  }
+
+  const subtreeHasEffect = ((finishedWork.subtreeFlags & MutationMask) !== NoFlags);
+  const rootHasEffect = ((finishedWork.flags & MutationMask) !== NoFlags);
+  if (subtreeHasEffect || rootHasEffect) {
+    // commitBeforeMutationEffects
+    commitMutationEffects(fiberRoot, finishedWork);
+    fiberRoot.current = finishedWork;
+    // commitLayoutEffects
+  }
 }
