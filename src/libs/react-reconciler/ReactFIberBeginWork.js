@@ -3,6 +3,7 @@ import { reconcileChildFibers, mountChildFibers } from './ReactChildFiber';
 import { HostRoot, FunctionComponent, IndeterminateComponent, HostComponent } from './ReactWorkTags';
 import { shouldSetTextContent } from '../react-dom/client/ReactDOMHostConfig';
 import { ContentReset } from './ReactFiberFlags';
+import { pushHostContainer } from './ReactFiberHostContext';
 
 export function beginWork(current, wip) {
   if (current !== null) {
@@ -26,7 +27,13 @@ export function beginWork(current, wip) {
   }
 }
 
+function pushHostRootContext(wip) {
+  const fiberRoot = wip.stateNode;
+  pushHostContainer(fiberRoot, fiberRoot.containerInfo);
+}
+
 function updateHostRoot(current, wip) {
+  pushHostRootContext(wip);
   const nextProps = wip.pendingProps;
   // fixme: wip's updateQueue is assigned from HostRootFiber, why does it need to be cloned?
   // cloneUpdateQueue(current, wip);
