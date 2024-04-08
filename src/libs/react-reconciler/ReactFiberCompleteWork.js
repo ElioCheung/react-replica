@@ -1,4 +1,4 @@
-import { NoFlags, Update } from './ReactFiberFlags';
+import { NoFlags, Snapshot, Update, ForceClientRender } from './ReactFiberFlags';
 import { IndeterminateComponent, LazyComponent, SimpleMemoComponent, FunctionComponent, ForwardRef, Fragment, Mode, Profiler, ContextConsumer, MemoComponent, HostRoot, HostComponent } from './ReactWorkTags';
 import { getRootHostContainer } from './ReactFiberHostContext';
 import { appendAllChildren, createInstance, finalizeInitialChildren } from '../react-dom/client/ReactDOMHostConfig';
@@ -20,6 +20,14 @@ export function completeWork(current, wip) {
       bubbleProperties(wip);
       return null;
     case HostRoot:
+      // if (current === null || current.child === null) {
+      //   if (current !== null) {
+      //     const prevState = current.memoizedState;
+      //     if (!prevState.isDehydrated || (wip.flags & ForceClientRender) !== NoFlags) {
+      //       wip.flags |= Snapshot;
+      //     }
+      //   }
+      // }
       bubbleProperties(wip);
       return null;
     case HostComponent:
